@@ -93,7 +93,7 @@ export default function PositionsTable({ positions, prices, details, totalValue,
 
   return (
     <div className="card overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
+      <div className="flex items-center justify-between px-4 md:px-5 py-3 md:py-4 border-b" style={{ borderColor: 'var(--border)' }}>
         <div>
           <h2 className="font-semibold text-white">My Positions</h2>
           <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{positions.length} assets tracked</p>
@@ -103,11 +103,49 @@ export default function PositionsTable({ positions, prices, details, totalValue,
           className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium transition-colors"
           style={{ background: 'rgba(59,130,246,0.15)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.25)' }}
         >
-          <Plus size={13} /> Add Position
+          <Plus size={13} /> Add
         </button>
       </div>
 
-      <div className="overflow-x-auto">
+      {/* Mobile card list */}
+      <div className="md:hidden divide-y" style={{ borderColor: 'rgba(30,45,74,0.5)' }}>
+        {sorted.map(pos => (
+          <div key={pos.id} className="px-4 py-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <CoinIcon symbol={pos.symbol} size={36} />
+              <div className="min-w-0">
+                <div className="font-medium text-white text-sm">{pos.symbol}</div>
+                <div className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
+                  {fmtNum(pos.amount, pos.amount < 1 ? 4 : 2)} {pos.symbol}
+                </div>
+              </div>
+            </div>
+            <div className="text-right shrink-0">
+              <div className="font-semibold text-white text-sm number-font">
+                {pos.value ? fmt$(pos.value) : '—'}
+              </div>
+              <div className="text-xs number-font">
+                {pos.currentPrice ? fmt$(pos.currentPrice, pos.currentPrice > 100 ? 2 : 4) : '—'}
+              </div>
+            </div>
+            <div className="text-right shrink-0">
+              {pos.pnl !== null ? (
+                <div className={`text-xs font-semibold number-font ${pos.pnl >= 0 ? 'positive' : 'negative'}`}>
+                  {pos.pnl >= 0 ? '+' : ''}{fmt$(pos.pnl)}
+                </div>
+              ) : null}
+              {pos.change24h !== null ? (
+                <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${pos.change24h >= 0 ? 'badge-green' : 'badge-red'}`}>
+                  {fmtPct(pos.change24h)}
+                </span>
+              ) : null}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
@@ -217,6 +255,7 @@ export default function PositionsTable({ positions, prices, details, totalValue,
           </tbody>
         </table>
       </div>
+      {/* end desktop table */}
 
       {addOpen && <AddPositionModal onClose={() => setAddOpen(false)} />}
     </div>

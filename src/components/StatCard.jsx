@@ -26,25 +26,25 @@ export function fmtNum(n, decimals = 4) {
 export default function StatCard({ label, value, subValue, change, icon: Icon, accent }) {
   const isPositive = change >= 0
   return (
-    <div className="card p-5 flex flex-col gap-3">
+    <div className="card p-3 md:p-5 flex flex-col gap-2 md:gap-3">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+        <span style={{ color: 'var(--text-muted)', fontSize: 10, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
           {label}
         </span>
         {Icon && (
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center"
+          <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg flex items-center justify-center"
             style={{ background: accent || 'rgba(59,130,246,0.1)', color: accent ? 'white' : '#60a5fa' }}>
-            <Icon size={15} />
+            <Icon size={13} />
           </div>
         )}
       </div>
       <div>
-        <div className="text-2xl font-bold text-white number-font">{value}</div>
-        {subValue && <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{subValue}</div>}
+        <div className="font-bold text-white number-font" style={{ fontSize: 'clamp(1rem, 4vw, 1.5rem)' }}>{value}</div>
+        {subValue && <div className="text-xs mt-0.5 truncate" style={{ color: 'var(--text-muted)' }}>{subValue}</div>}
       </div>
       {change !== undefined && (
         <div className={`flex items-center gap-1 text-xs font-medium ${isPositive ? 'positive' : 'negative'}`}>
-          {isPositive ? <TrendingUp size={13} /> : <TrendingDown size={13} />}
+          {isPositive ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
           {fmtPct(change)} 24h
         </div>
       )}

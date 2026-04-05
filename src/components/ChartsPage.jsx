@@ -35,7 +35,7 @@ export default function ChartsPage({ prices, details }) {
   }).sort((a, b) => b.change - a.change)
 
   return (
-    <div className="flex flex-col gap-5 p-6">
+    <div className="flex flex-col gap-4 p-3 md:p-6">
       <PriceChart positions={positions} prices={prices} details={details} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
