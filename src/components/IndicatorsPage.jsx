@@ -436,7 +436,7 @@ function FearGreedChart({ data = [] }) {
 // Main IndicatorsPage
 // ---------------------------------------------------------------------------
 export default function IndicatorsPage({ positions = [], prices = {} }) {
-  const { data, loading, error } = useIndicators()
+  const { data, loading, error, retry } = useIndicators()
 
   if (loading) {
     return (
@@ -449,11 +449,15 @@ export default function IndicatorsPage({ positions = [], prices = {} }) {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 py-20">
+      <div className="flex flex-col items-center justify-center gap-4 py-20 px-6">
         <AlertTriangle size={36} style={{ color: '#f97316' }} />
         <div style={{ color: 'white', fontWeight: 600, fontSize: 15 }}>Failed to load indicators</div>
         <div style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', maxWidth: 380 }}>{error}</div>
-        <div style={{ color: '#60a5fa', fontSize: 12 }}>Refresh the page to retry (CoinGecko rate limit may apply)</div>
+        <button onClick={retry}
+          style={{ background: '#3b82f6', color: 'white', border: 'none', borderRadius: 8, padding: '10px 24px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+          Retry Now
+        </button>
+        <div style={{ color: 'var(--text-muted)', fontSize: 11 }}>CoinGecko free API allows ~10 requests/min. Wait 60s if retrying.</div>
       </div>
     )
   }
