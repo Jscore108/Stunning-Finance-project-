@@ -1,7 +1,7 @@
 import React from 'react'
 import {
   LayoutDashboard, TrendingUp, Wallet, BarChart2,
-  Star, Settings, Bell, ChevronRight, Activity
+  Star, Settings, Bell, ChevronRight, Activity, Newspaper
 } from 'lucide-react'
 
 const NAV = [
@@ -10,6 +10,7 @@ const NAV = [
   { id: 'markets',    label: 'Markets',      icon: TrendingUp },
   { id: 'charts',     label: 'Charts',       icon: BarChart2 },
   { id: 'watchlist',  label: 'Watchlist',    icon: Star },
+  { id: 'news',       label: 'News',         icon: Newspaper },
 ]
 
 export default function Sidebar({ active, onNav }) {
