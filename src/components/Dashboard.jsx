@@ -46,9 +46,9 @@ export default function Dashboard({ prices, details, loading }) {
   }, [positions, prices, details])
 
   return (
-    <div className="flex flex-col gap-5 p-6">
+    <div className="flex flex-col gap-4 p-3 md:p-6">
       {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         <StatCard
           label="Total Portfolio Value"
           value={loading && !stats.totalValue ? '—' : fmt$(stats.totalValue)}
@@ -77,7 +77,7 @@ export default function Dashboard({ prices, details, loading }) {
       </div>
 
       {/* Portfolio chart + Allocation */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-5">
         <div className="lg:col-span-2">
           <PortfolioChart totalValue={stats.totalValue} />
         </div>

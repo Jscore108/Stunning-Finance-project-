@@ -56,8 +56,8 @@ export default function PortfolioChart({ totalValue }) {
   const isUp = change >= 0
 
   return (
-    <div className="card p-5">
-      <div className="flex items-start justify-between mb-4">
+    <div className="card p-3 md:p-5">
+      <div className="flex items-start justify-between mb-3 md:mb-4">
         <div>
           <div className="text-xs font-medium uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>
             Portfolio Value

@@ -59,7 +59,7 @@ export default function WatchlistPage({ watchlist, details, prices }) {
     .filter(i => !search || i.name.toLowerCase().includes(search.toLowerCase()) || i.symbol.toLowerCase().includes(search.toLowerCase()))
 
   return (
-    <div className="flex flex-col gap-5 p-6">
+    <div className="flex flex-col gap-4 p-3 md:p-6">
       <div className="card overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
           <div className="flex items-center gap-2">
