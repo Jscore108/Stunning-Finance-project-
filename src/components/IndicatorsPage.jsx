@@ -1,207 +1,430 @@
-import React, { useState } from 'react'
+import React from 'react'
 import {
-  AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, ReferenceLine, BarChart, Bar, Cell
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, ReferenceLine,
 } from 'recharts'
 import { useIndicators } from '../hooks/useIndicators'
 import { fmt$, fmtPct } from './StatCard'
-import { Target, TrendingUp, TrendingDown, AlertTriangle, CheckCircle, Info, ExternalLink } from 'lucide-react'
+import {
+  Target, TrendingUp, TrendingDown, Info, ExternalLink,
+  Zap, Shield, AlertTriangle,
+} from 'lucide-react'
 
-const BTC_TARGET_LOW  = 400000
-const BTC_TARGET_HIGH = 450000
+// ---------------------------------------------------------------------------
+// Zone configs
+// ---------------------------------------------------------------------------
+const FNG_ZONES = [
+  { from: 0,  to: 25,  color: '#ef4444' },
+  { from: 25, to: 45,  color: '#f97316' },
+  { from: 45, to: 55,  color: '#eab308' },
+  { from: 55, to: 75,  color: '#84cc16' },
+  { from: 75, to: 100, color: '#22c55e' },
+]
+const RSI_ZONES = [
+  { from: 0,  to: 30,  color: '#22c55e' },
+  { from: 30, to: 70,  color: '#eab308' },
+  { from: 70, to: 100, color: '#ef4444' },
+]
+const MVRV_ZONES = [
+  { from: 0,  to: 25,  color: '#22c55e' },
+  { from: 25, to: 55,  color: '#eab308' },
+  { from: 55, to: 80,  color: '#f97316' },
+  { from: 80, to: 100, color: '#ef4444' },
+]
+const ALT_ZONES = [
+  { from: 0,  to: 25,  color: '#3b82f6' },
+  { from: 25, to: 50,  color: '#a855f7' },
+  { from: 50, to: 75,  color: '#ec4899' },
+  { from: 75, to: 100, color: '#22c55e' },
+]
 
-// ── Gauge ──────────────────────────────────────────────────────────────────
-function Gauge({ value, min = 0, max = 100, label, sublabel, color, zones }) {
-  const pct = Math.min(Math.max((value - min) / (max - min), 0), 1)
-  const angle = -135 + pct * 270
-  const r = 54, cx = 70, cy = 70
-  const toRad = deg => (deg * Math.PI) / 180
-  const arcPath = (startDeg, endDeg, col) => {
-    const s = toRad(startDeg - 90), e = toRad(endDeg - 90)
-    const x1 = cx + r * Math.cos(s), y1 = cy + r * Math.sin(s)
-    const x2 = cx + r * Math.cos(e), y2 = cy + r * Math.sin(e)
-    const large = endDeg - startDeg > 180 ? 1 : 0
-    return <path key={col} d={`M${x1} ${y1} A${r} ${r} 0 ${large} 1 ${x2} ${y2}`}
-      fill="none" stroke={col} strokeWidth="10" strokeLinecap="round" />
-  }
-  const needleX = cx + (r - 14) * Math.cos(toRad(angle - 90))
-  const needleY = cy + (r - 14) * Math.sin(toRad(angle - 90))
+// ---------------------------------------------------------------------------
+// Gauge
+// ---------------------------------------------------------------------------
+function polarToCartesian(cx, cy, r, angleDeg) {
+  const rad = ((angleDeg - 90) * Math.PI) / 180
+  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) }
+}
+
+function describeArc(cx, cy, r, startAngle, endAngle) {
+  const start = polarToCartesian(cx, cy, r, endAngle)
+  const end   = polarToCartesian(cx, cy, r, startAngle)
+  const large = endAngle - startAngle > 180 ? 1 : 0
+  return `M ${start.x} ${start.y} A ${r} ${r} 0 ${large} 0 ${end.x} ${end.y}`
+}
+
+function Gauge({ value = 0, label, sublabel, color = '#22c55e', zones = [] }) {
+  const cx = 100, cy = 90, r = 70
+  const startAngle = -135
+  const endAngle   = 135
+  const totalSpan  = endAngle - startAngle
+
+  const needleAngle = startAngle + (Math.min(Math.max(value, 0), 100) / 100) * totalSpan
+  const needleEnd   = polarToCartesian(cx, cy, r - 8, needleAngle)
 
   return (
-    <div className="card p-4 flex flex-col items-center gap-1">
-      <div className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>{label}</div>
-      <svg width={140} height={90} viewBox="0 0 140 90">
+    <div className="card p-3 flex flex-col items-center gap-1">
+      <svg viewBox="0 0 200 140" style={{ width: '100%', maxWidth: 200 }}>
         {/* Background arc */}
-        {arcPath(-135, 135, 'var(--border)')}
+        <path
+          d={describeArc(cx, cy, r, startAngle, endAngle)}
+          fill="none"
+          stroke="rgba(255,255,255,0.08)"
+          strokeWidth={14}
+          strokeLinecap="round"
+        />
         {/* Zone arcs */}
-        {zones && zones.map(z => arcPath(
-          -135 + (z.from / 100) * 270,
-          -135 + (z.to / 100) * 270,
-          z.color
-        ))}
+        {zones.map((z, i) => {
+          const zStart = startAngle + (z.from / 100) * totalSpan
+          const zEnd   = startAngle + (z.to   / 100) * totalSpan
+          return (
+            <path
+              key={i}
+              d={describeArc(cx, cy, r, zStart, zEnd)}
+              fill="none"
+              stroke={z.color}
+              strokeWidth={14}
+              strokeLinecap="butt"
+              opacity={0.7}
+            />
+          )
+        })}
         {/* Needle */}
-        <line x1={cx} y1={cy} x2={needleX} y2={needleY} stroke="white" strokeWidth="2.5" strokeLinecap="round" />
-        <circle cx={cx} cy={cy} r={4} fill="white" />
-        {/* Value */}
-        <text x={cx} y={cy + 20} textAnchor="middle" fill="white" fontSize={15} fontWeight={700}>
-          {typeof value === 'number' ? value.toFixed(1) : value}
+        <line
+          x1={cx} y1={cy}
+          x2={needleEnd.x} y2={needleEnd.y}
+          stroke="white"
+          strokeWidth={2.5}
+          strokeLinecap="round"
+        />
+        <circle cx={cx} cy={cy} r={5} fill={color} />
+        {/* Value text */}
+        <text
+          x={cx} y={cy + 22}
+          textAnchor="middle"
+          fill="white"
+          fontSize={22}
+          fontWeight="bold"
+          fontFamily="var(--font-number, monospace)"
+        >
+          {Math.round(value)}
         </text>
       </svg>
-      <div className="text-xs font-medium" style={{ color }}>{sublabel}</div>
+      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)' }}>{label}</div>
+      {sublabel && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{sublabel}</div>}
     </div>
   )
 }
 
-// ── Signal badge ───────────────────────────────────────────────────────────
-function Signal({ label, value, signal, description, link }) {
-  const colors = { bullish: '#10b981', bearish: '#ef4444', neutral: '#f59e0b', warning: '#f97316' }
-  const col = colors[signal] || colors.neutral
+// ---------------------------------------------------------------------------
+// CycleScoreBar
+// ---------------------------------------------------------------------------
+function cycleLabel(score) {
+  if (score < 40) return { text: 'Early Bull', color: '#22c55e' }
+  if (score < 65) return { text: 'Mid Bull',   color: '#eab308' }
+  if (score < 80) return { text: 'Late Bull / Distribution', color: '#f97316' }
+  return { text: 'Cycle Top Zone', color: '#ef4444' }
+}
+
+function CycleScoreBar({ score = 0 }) {
+  const { text, color } = cycleLabel(score)
+  const pct = Math.min(Math.max(score, 0), 100)
   return (
-    <div className="card p-4 flex flex-col gap-2">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>{label}</span>
-        {link && (
-          <a href={link} target="_blank" rel="noopener noreferrer" className="opacity-40 hover:opacity-100 transition-opacity">
-            <ExternalLink size={11} style={{ color: 'var(--text-muted)' }} />
-          </a>
-        )}
+    <div className="card p-4 md:p-5">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', fontWeight: 500 }}>
+            Cycle Score
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 }}>
+            Composite indicator (RSI + F&G + MVRV + Pi Cycle)
+          </div>
+        </div>
+        <div className="number-font" style={{ fontSize: 'clamp(2rem, 6vw, 3rem)', fontWeight: 800, color, lineHeight: 1 }}>
+          {score}
+          <span style={{ fontSize: '0.4em', color: 'var(--text-muted)', marginLeft: 2 }}>/100</span>
+        </div>
       </div>
-      <div className="text-lg font-bold number-font" style={{ color: col }}>{value}</div>
-      <div className="flex items-center justify-between">
-        <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{description}</span>
-        <span className="text-xs px-2 py-0.5 rounded-full font-medium capitalize"
-          style={{ background: `${col}18`, color: col, border: `1px solid ${col}33` }}>
-          {signal}
+      {/* Track */}
+      <div style={{ position: 'relative', height: 18, borderRadius: 9, overflow: 'hidden', background: 'rgba(255,255,255,0.06)' }}>
+        {/* Gradient fill */}
+        <div style={{
+          height: '100%',
+          width: `${pct}%`,
+          background: 'linear-gradient(90deg, #22c55e 0%, #eab308 40%, #f97316 65%, #ef4444 80%, #b91c1c 100%)',
+          borderRadius: 9,
+          transition: 'width 0.6s ease',
+        }} />
+        {/* Zone markers */}
+        {[40, 65, 80].map(m => (
+          <div key={m} style={{
+            position: 'absolute', top: 0, bottom: 0, left: `${m}%`,
+            width: 2, background: 'rgba(0,0,0,0.4)',
+          }} />
+        ))}
+      </div>
+      <div className="flex justify-between mt-2" style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+        <span>Accumulation</span>
+        <span>Early Bull</span>
+        <span>Mid Bull</span>
+        <span>Late Bull</span>
+        <span>Top Zone</span>
+      </div>
+      <div className="mt-3 flex items-center gap-2">
+        <div style={{ width: 10, height: 10, borderRadius: '50%', background: color, flexShrink: 0 }} />
+        <span style={{ fontSize: 13, fontWeight: 600, color }}>{text}</span>
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Signal
+// ---------------------------------------------------------------------------
+const SIGNAL_STYLES = {
+  bullish: { bg: 'rgba(34,197,94,0.15)', border: 'rgba(34,197,94,0.4)', text: '#22c55e', label: 'Bullish' },
+  bearish: { bg: 'rgba(239,68,68,0.15)',  border: 'rgba(239,68,68,0.4)',  text: '#ef4444', label: 'Bearish' },
+  neutral: { bg: 'rgba(234,179,8,0.15)',  border: 'rgba(234,179,8,0.4)',  text: '#eab308', label: 'Neutral' },
+  warning: { bg: 'rgba(249,115,22,0.15)', border: 'rgba(249,115,22,0.4)', text: '#f97316', label: 'Warning' },
+}
+
+function Signal({ label, value, signal = 'neutral', description, link }) {
+  const s = SIGNAL_STYLES[signal] || SIGNAL_STYLES.neutral
+  return (
+    <div className="card card-hover p-3 md:p-4 flex flex-col gap-2">
+      <div className="flex items-start justify-between gap-2">
+        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', lineHeight: 1.3 }}>{label}</div>
+        <span style={{
+          fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 99,
+          background: s.bg, border: `1px solid ${s.border}`, color: s.text,
+          whiteSpace: 'nowrap', flexShrink: 0,
+        }}>
+          {s.label}
+        </span>
+      </div>
+      <div className="number-font" style={{ fontSize: 13, fontWeight: 700, color: 'white' }}>{value}</div>
+      {description && (
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.4 }}>{description}</div>
+      )}
+      {link && (
+        <a
+          href={link}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1 mt-auto"
+          style={{ fontSize: 11, color: '#60a5fa', textDecoration: 'none' }}
+        >
+          View Live <ExternalLink size={10} />
+        </a>
+      )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// SellZoneTable
+// ---------------------------------------------------------------------------
+const SELL_ZONES = [
+  { btcPrice: 280000, label: 'Early Warning',       sellPct: 10, color: '#f59e0b' },
+  { btcPrice: 320000, label: 'Start Scaling',       sellPct: 15, color: '#f97316' },
+  { btcPrice: 370000, label: 'Accelerate',          sellPct: 20, color: '#ef4444' },
+  { btcPrice: 400000, label: 'Target Low \u2605',   sellPct: 25, color: '#dc2626' },
+  { btcPrice: 425000, label: 'Target Mid \u2605',   sellPct: 20, color: '#b91c1c' },
+  { btcPrice: 450000, label: 'Target High / Exit',  sellPct: 10, color: '#7f1d1d' },
+]
+
+function SellZoneTable({ currentPrice = 0, positions = [], prices = {} }) {
+  const btcAmount = positions
+    .filter(p => p.id === 'bitcoin')
+    .reduce((sum, p) => sum + (p.amount || 0), 0)
+
+  const TARGET_LOW  = 400000
+  const progressPct = currentPrice > 0
+    ? Math.min((currentPrice / TARGET_LOW) * 100, 100)
+    : 0
+  const pctToTarget = currentPrice > 0
+    ? ((TARGET_LOW - currentPrice) / currentPrice) * 100
+    : 0
+
+  const btcValueAtTarget = btcAmount * TARGET_LOW
+
+  let cumulative = 0
+  const zones = SELL_ZONES.map(z => {
+    const btcValue      = btcAmount * z.btcPrice
+    const pctGainNeeded = currentPrice > 0 ? ((z.btcPrice - currentPrice) / currentPrice) * 100 : 0
+    const btcToSell     = btcAmount * (z.sellPct / 100)
+    const proceeds      = btcToSell * z.btcPrice
+    cumulative         += proceeds
+    return { ...z, btcValue, pctGainNeeded, btcToSell, proceeds, cumulative }
+  })
+
+  const totalProceeds = zones.reduce((s, z) => s + z.proceeds, 0)
+
+  return (
+    <div className="card p-4 md:p-5">
+      {/* Header */}
+      <div className="flex items-center gap-2 mb-4">
+        <Target size={18} style={{ color: '#f59e0b' }} />
+        <div>
+          <div style={{ fontWeight: 700, fontSize: 15, color: 'white' }}>BTC Sell Zone Planner</div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Target: $400,000 &ndash; $450,000</div>
+        </div>
+      </div>
+
+      {/* Progress toward target */}
+      <div className="mb-4">
+        <div className="flex justify-between mb-1" style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+          <span>Progress toward $400k target</span>
+          <span className="number-font" style={{ color: 'var(--text-secondary)' }}>
+            {progressPct.toFixed(1)}%
+          </span>
+        </div>
+        <div style={{ height: 10, borderRadius: 5, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+          <div style={{
+            height: '100%',
+            width: `${progressPct}%`,
+            background: 'linear-gradient(90deg, #f59e0b, #ef4444)',
+            borderRadius: 5,
+            transition: 'width 0.5s ease',
+          }} />
+        </div>
+      </div>
+
+      {/* Stat boxes */}
+      <div className="grid grid-cols-3 gap-2 md:gap-3 mb-5">
+        <div className="rounded-xl p-2 md:p-3 text-center" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)' }}>
+          <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>BTC Price</div>
+          <div className="number-font font-bold" style={{ fontSize: 'clamp(0.75rem, 3vw, 1rem)', color: 'white', marginTop: 2 }}>
+            {fmt$(currentPrice, 0)}
+          </div>
+        </div>
+        <div className="rounded-xl p-2 md:p-3 text-center" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)' }}>
+          <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>% to $400k</div>
+          <div className="number-font font-bold" style={{ fontSize: 'clamp(0.75rem, 3vw, 1rem)', color: pctToTarget > 0 ? '#f59e0b' : '#22c55e', marginTop: 2 }}>
+            {pctToTarget > 0 ? `+${pctToTarget.toFixed(1)}%` : 'Reached!'}
+          </div>
+        </div>
+        <div className="rounded-xl p-2 md:p-3 text-center" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)' }}>
+          <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Value @ Target</div>
+          <div className="number-font font-bold" style={{ fontSize: 'clamp(0.75rem, 3vw, 1rem)', color: 'white', marginTop: 2 }}>
+            {fmt$(btcValueAtTarget, 0)}
+          </div>
+        </div>
+      </div>
+
+      {/* Table */}
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+          <thead>
+            <tr style={{ borderBottom: '1px solid var(--border)' }}>
+              {['Zone', 'BTC Price', '% Gain Needed', 'BTC Value', 'Sell %', 'Proceeds', 'Cumulative'].map(col => (
+                <th key={col} style={{ padding: '6px 8px', textAlign: 'left', color: 'var(--text-muted)', fontWeight: 600, fontSize: 11, whiteSpace: 'nowrap' }}>
+                  {col}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {zones.map((z, i) => (
+              <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                <td style={{ padding: '7px 8px', whiteSpace: 'nowrap' }}>
+                  <div className="flex items-center gap-1.5">
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: z.color, flexShrink: 0 }} />
+                    <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{z.label}</span>
+                  </div>
+                </td>
+                <td className="number-font" style={{ padding: '7px 8px', color: z.color, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                  {fmt$(z.btcPrice, 0)}
+                </td>
+                <td className="number-font" style={{ padding: '7px 8px', color: z.pctGainNeeded > 0 ? '#f59e0b' : '#22c55e', whiteSpace: 'nowrap' }}>
+                  {z.pctGainNeeded > 0 ? `+${z.pctGainNeeded.toFixed(1)}%` : 'Reached'}
+                </td>
+                <td className="number-font" style={{ padding: '7px 8px', color: 'white', whiteSpace: 'nowrap' }}>
+                  {fmt$(z.btcValue, 0)}
+                </td>
+                <td className="number-font" style={{ padding: '7px 8px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                  {z.sellPct}%
+                </td>
+                <td className="number-font" style={{ padding: '7px 8px', color: '#22c55e', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                  {fmt$(z.proceeds, 0)}
+                </td>
+                <td className="number-font" style={{ padding: '7px 8px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                  {fmt$(z.cumulative, 0)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr style={{ borderTop: '2px solid var(--border)', background: 'rgba(255,255,255,0.03)' }}>
+              <td colSpan={3} style={{ padding: '8px 8px', color: 'var(--text-muted)', fontSize: 12, fontWeight: 600 }}>
+                Total BTC Holdings: <span className="number-font" style={{ color: 'white' }}>{btcAmount.toFixed(8)} BTC</span>
+              </td>
+              <td colSpan={2} style={{ padding: '8px 8px', color: 'var(--text-muted)', fontSize: 12 }} />
+              <td colSpan={2} style={{ padding: '8px 8px', fontWeight: 700, fontSize: 13 }}>
+                <span style={{ color: 'var(--text-muted)' }}>Est. Total: </span>
+                <span className="number-font" style={{ color: '#22c55e' }}>{fmt$(totalProceeds, 0)}</span>
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      {/* Note */}
+      <div className="mt-3 flex items-start gap-2 rounded-lg p-3" style={{ background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.2)' }}>
+        <Info size={13} style={{ color: '#eab308', marginTop: 1, flexShrink: 0 }} />
+        <span style={{ fontSize: 11, color: '#eab308', lineHeight: 1.4 }}>
+          Keep 5&ndash;10% as lottery ticket for $500k+ overshoot
         </span>
       </div>
     </div>
   )
 }
 
-// ── Target Progress ────────────────────────────────────────────────────────
-function TargetTracker({ currentPrice, positions, prices }) {
-  const portfolioAtPrice = (targetPrice) => {
-    if (!positions || !prices) return 0
-    return positions.reduce((sum, pos) => {
-      const ratio = targetPrice / (currentPrice || 1)
-      const currentVal = (prices[pos.id]?.usd ?? 0) * pos.amount
-      // For BTC scale the whole portfolio proportionally (simplified)
-      return sum + currentVal
-    }, 0)
-  }
-
-  const pctToLow  = currentPrice ? ((BTC_TARGET_LOW  - currentPrice) / currentPrice * 100) : 0
-  const pctToHigh = currentPrice ? ((BTC_TARGET_HIGH - currentPrice) / currentPrice * 100) : 0
-  const progress  = currentPrice ? Math.min((currentPrice / BTC_TARGET_LOW) * 100, 100) : 0
-
-  const SELL_ZONES = [
-    { label: 'Zone 1 — Early',    range: '$350k–$380k', pct: '15–20%',  action: 'Scale out 15–20% of BTC holdings', color: '#f59e0b', signal: 'Prepare' },
-    { label: 'Zone 2 — Target Low',  range: '$380k–$410k', pct: '25–30%',  action: 'Sell 25–30% — target entry zone', color: '#f97316', signal: 'Sell' },
-    { label: 'Zone 3 — Target Mid',  range: '$410k–$430k', pct: '25–30%',  action: 'Continue distributing 25–30%',    color: '#ef4444', signal: 'Sell Hard' },
-    { label: 'Zone 4 — Target High', range: '$430k–$450k', pct: '20–25%',  action: 'Final distribution, keep 5–10% for run-on', color: '#dc2626', signal: 'Exit' },
-  ]
-
+// ---------------------------------------------------------------------------
+// FearGreedChart
+// ---------------------------------------------------------------------------
+function FearGreedChart({ data = [] }) {
+  if (!data || data.length === 0) return null
   return (
-    <div className="card p-5 flex flex-col gap-4">
-      {/* Header */}
-      <div className="flex items-center gap-2">
-        <Target size={18} style={{ color: '#3b82f6' }} />
+    <div className="card p-4 md:p-5">
+      <div className="flex items-center gap-2 mb-4">
+        <Zap size={16} style={{ color: '#f59e0b' }} />
         <div>
-          <h2 className="font-semibold text-white">BTC Cycle Target Tracker</h2>
-          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Goal: $400,000 – $450,000</p>
+          <div style={{ fontWeight: 700, fontSize: 14, color: 'white' }}>Fear &amp; Greed Index &mdash; 30 Days</div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+            Current: <span className="number-font" style={{ color: 'white' }}>{data[data.length - 1]?.value}</span>
+            {' '}&mdash; {data[data.length - 1]?.label}
+          </div>
         </div>
       </div>
-
-      {/* Progress bar */}
-      <div>
-        <div className="flex justify-between text-xs mb-1.5" style={{ color: 'var(--text-muted)' }}>
-          <span>Current: <span className="text-white font-semibold">{fmt$(currentPrice)}</span></span>
-          <span>Target: <span className="font-semibold" style={{ color: '#60a5fa' }}>$400k–$450k</span></span>
-        </div>
-        <div className="relative h-4 rounded-full overflow-hidden" style={{ background: 'var(--border)' }}>
-          {/* Progress fill */}
-          <div className="absolute left-0 top-0 h-full rounded-full transition-all duration-700"
-            style={{ width: `${progress}%`, background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)' }} />
-          {/* Target zone markers */}
-          <div className="absolute top-0 h-full w-0.5" style={{ left: '88.9%', background: '#f59e0b' }} />
-          <div className="absolute top-0 h-full w-0.5" style={{ left: '100%', background: '#ef4444' }} />
-        </div>
-        <div className="flex justify-between text-xs mt-1">
-          <span style={{ color: 'var(--text-muted)' }}>$0</span>
-          <span style={{ color: '#f59e0b' }}>$350k</span>
-          <span style={{ color: '#ef4444' }}>$450k</span>
-        </div>
-      </div>
-
-      {/* Stats row */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="rounded-xl p-3 text-center" style={{ background: 'var(--bg-primary)' }}>
-          <div className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Progress</div>
-          <div className="font-bold text-white number-font">{progress.toFixed(1)}%</div>
-          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>to $400k</div>
-        </div>
-        <div className="rounded-xl p-3 text-center" style={{ background: 'var(--bg-primary)' }}>
-          <div className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Needed</div>
-          <div className="font-bold number-font" style={{ color: '#60a5fa' }}>+{pctToLow.toFixed(1)}%</div>
-          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>to $400k</div>
-        </div>
-        <div className="rounded-xl p-3 text-center" style={{ background: 'var(--bg-primary)' }}>
-          <div className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>Full Target</div>
-          <div className="font-bold number-font" style={{ color: '#8b5cf6' }}>+{pctToHigh.toFixed(1)}%</div>
-          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>to $450k</div>
-        </div>
-      </div>
-
-      {/* Sell zones */}
-      <div>
-        <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-muted)' }}>
-          Suggested Distribution Zones
-        </div>
-        <div className="flex flex-col gap-2">
-          {SELL_ZONES.map((z, i) => (
-            <div key={i} className="flex items-center gap-3 p-3 rounded-xl"
-              style={{ background: 'var(--bg-primary)', border: `1px solid ${z.color}22` }}>
-              <div className="w-2 h-2 rounded-full shrink-0" style={{ background: z.color }} />
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-semibold text-white">{z.label} <span style={{ color: z.color }}>{z.range}</span></div>
-                <div className="text-xs mt-0.5 truncate" style={{ color: 'var(--text-secondary)' }}>{z.action}</div>
-              </div>
-              <div className="text-xs font-bold shrink-0" style={{ color: z.color }}>{z.pct}</div>
-            </div>
-          ))}
-        </div>
-        <p className="text-xs mt-3 p-3 rounded-xl" style={{ background: 'rgba(59,130,246,0.07)', color: 'var(--text-muted)', border: '1px solid rgba(59,130,246,0.15)' }}>
-          <Info size={10} className="inline mr-1" />
-          Strategy: Scale out in zones — never sell everything at once. Keep 5–10% as a lottery ticket for a potential overshoot above $450k.
-        </p>
-      </div>
-    </div>
-  )
-}
-
-// ── Fear & Greed Chart ─────────────────────────────────────────────────────
-function FearGreedChart({ history }) {
-  if (!history?.length) return null
-  return (
-    <div className="card p-4">
-      <h3 className="text-sm font-semibold text-white mb-3">Fear & Greed — 30 Days</h3>
-      <div style={{ height: 120 }}>
+      <div style={{ height: 180 }}>
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={history} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
+          <AreaChart data={data} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
             <defs>
               <linearGradient id="fngGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                <stop offset="5%"  stopColor="#f59e0b" stopOpacity={0.4} />
+                <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.02} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(30,45,74,0.5)" vertical={false} />
-            <XAxis dataKey="date" tick={{ fontSize: 9, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} interval={6} />
-            <YAxis domain={[0, 100]} tick={{ fontSize: 9, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
-            <ReferenceLine y={25} stroke="#ef4444" strokeDasharray="3 3" strokeWidth={1} />
-            <ReferenceLine y={75} stroke="#10b981" strokeDasharray="3 3" strokeWidth={1} />
-            <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 11 }}
-              formatter={(v, n, p) => [v, p.payload.label]} />
-            <Area type="monotone" dataKey="value" stroke="#f59e0b" strokeWidth={2} fill="url(#fngGrad)" dot={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+            <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+            <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} />
+            <Tooltip
+              contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
+              labelStyle={{ color: 'var(--text-muted)' }}
+              itemStyle={{ color: '#f59e0b' }}
+            />
+            <ReferenceLine y={25} stroke="#ef4444" strokeDasharray="4 4" strokeOpacity={0.5} label={{ value: 'Fear', fill: '#ef4444', fontSize: 10, position: 'right' }} />
+            <ReferenceLine y={75} stroke="#22c55e" strokeDasharray="4 4" strokeOpacity={0.5} label={{ value: 'Greed', fill: '#22c55e', fontSize: 10, position: 'right' }} />
+            <Area
+              type="monotone"
+              dataKey="value"
+              stroke="#f59e0b"
+              strokeWidth={2}
+              fill="url(#fngGrad)"
+              dot={false}
+              activeDot={{ r: 4, fill: '#f59e0b' }}
+            />
           </AreaChart>
         </ResponsiveContainer>
       </div>
@@ -209,197 +432,239 @@ function FearGreedChart({ history }) {
   )
 }
 
-// ── Pi Cycle ───────────────────────────────────────────────────────────────
-function PiCycleCard({ piCycle }) {
-  if (!piCycle) return null
-  const { ma111, ma350x2, gap, currentPrice } = piCycle
-  const isTopped = gap >= 0
-  const signal = isTopped ? 'bearish' : gap > -10 ? 'warning' : 'bullish'
-  const signalText = isTopped ? 'CROSSED — Cycle Top Signal!' : gap > -10 ? 'Approaching Top' : 'Not Topped Yet'
-
-  return (
-    <Signal
-      label="Pi Cycle Top"
-      value={`${gap >= 0 ? '+' : ''}${gap.toFixed(1)}% gap`}
-      signal={signal}
-      description={`111DMA: ${fmt$(ma111)} | 2×350DMA: ${fmt$(ma350x2)}`}
-      link="https://lookintobitcoin.com/charts/pi-cycle-top-indicator/"
-    />
-  )
-}
-
-// ── Main Page ──────────────────────────────────────────────────────────────
-export default function IndicatorsPage({ positions, prices }) {
+// ---------------------------------------------------------------------------
+// Main IndicatorsPage
+// ---------------------------------------------------------------------------
+export default function IndicatorsPage({ positions = [], prices = {} }) {
   const { data, loading, error } = useIndicators()
 
-  if (loading) return (
-    <div className="flex items-center justify-center h-64 text-sm" style={{ color: 'var(--text-muted)' }}>
-      <div className="animate-pulse-slow">Loading market indicators…</div>
-    </div>
-  )
-  if (error) return (
-    <div className="p-6 text-sm" style={{ color: 'var(--red)' }}>Failed to load indicators: {error}</div>
-  )
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 py-20">
+        <div style={{ width: 40, height: 40, borderRadius: '50%', border: '3px solid rgba(255,255,255,0.1)', borderTopColor: '#f59e0b', animation: 'spin 0.8s linear infinite' }} />
+        <div style={{ color: 'var(--text-muted)', fontSize: 14 }}>Loading indicators&hellip;</div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 py-20">
+        <AlertTriangle size={36} style={{ color: '#f97316' }} />
+        <div style={{ color: 'white', fontWeight: 600, fontSize: 15 }}>Failed to load indicators</div>
+        <div style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', maxWidth: 380 }}>{error}</div>
+        <div style={{ color: '#60a5fa', fontSize: 12 }}>Refresh the page to retry (CoinGecko rate limit may apply)</div>
+      </div>
+    )
+  }
 
   const {
-    currentPrice, change24h, btcDominance, ethDominance,
-    ma50, ma200, rsi, piCycle, mvrvEst, altSeasonScore,
-    fngHistory, currentFng, totalMarketCap,
-  } = data
+    currentPrice = 0,
+    rsi = 50,
+    cycleScore = 0,
+    btcDominance = 50,
+    totalMarketCap = 0,
+    ma50 = 0,
+    ma200 = 0,
+    piCycle,
+    mvrvEst = 2,
+    altSeasonScore = 50,
+    currentFng = {},
+    fngHistory = [],
+  } = data || {}
 
-  const goldenCross = ma50 > ma200
-  const rsiSignal = rsi > 70 ? 'bearish' : rsi < 30 ? 'bullish' : 'neutral'
-  const rsiLabel = rsi > 80 ? 'Extremely Overbought' : rsi > 70 ? 'Overbought' : rsi < 30 ? 'Oversold' : rsi < 40 ? 'Approaching Oversold' : 'Neutral'
-  const fngSignal = currentFng?.value > 75 ? 'bearish' : currentFng?.value < 25 ? 'bullish' : 'neutral'
-  const domSignal = btcDominance < 45 ? 'bullish' : btcDominance > 60 ? 'bearish' : 'neutral'
-  const mvrvSignal = mvrvEst > 6 ? 'bearish' : mvrvEst > 4 ? 'warning' : 'bullish'
-  const mvrvLabel = mvrvEst > 6 ? 'Overvalued — Danger Zone' : mvrvEst > 4 ? 'Elevated' : mvrvEst > 2 ? 'Fair Value' : 'Undervalued'
+  // Normalize MVRV (0-7) to 0-100 for gauge
+  const mvrvPct = Math.min((mvrvEst / 7) * 100, 100)
 
-  const MVRV_ZONES = [
-    { from: 0, to: 25, color: '#10b981' },
-    { from: 25, to: 55, color: '#f59e0b' },
-    { from: 55, to: 80, color: '#f97316' },
-    { from: 80, to: 100, color: '#ef4444' },
-  ]
-  const FNG_ZONES = [
-    { from: 0, to: 25, color: '#ef4444' },
-    { from: 25, to: 45, color: '#f97316' },
-    { from: 45, to: 55, color: '#f59e0b' },
-    { from: 55, to: 75, color: '#84cc16' },
-    { from: 75, to: 100, color: '#10b981' },
-  ]
-  const RSI_ZONES = [
-    { from: 0, to: 30, color: '#10b981' },
-    { from: 30, to: 70, color: '#f59e0b' },
-    { from: 70, to: 100, color: '#ef4444' },
-  ]
-  const ALT_ZONES = [
-    { from: 0, to: 25, color: '#3b82f6' },
-    { from: 25, to: 50, color: '#8b5cf6' },
-    { from: 50, to: 75, color: '#ec4899' },
-    { from: 75, to: 100, color: '#10b981' },
-  ]
+  // RSI gauge: map 0-100 RSI directly
+  const rsiVal = rsi != null ? rsi : 50
+
+  // Pi Cycle signal
+  const piGap = piCycle?.gap ?? null
+  const piSignal = piGap == null ? 'neutral'
+    : piGap > -5 && piGap < 5 ? 'warning'
+    : piGap <= -5             ? 'bullish'
+    :                           'bearish'
+  const piValue = piGap != null
+    ? `Gap: ${piGap > 0 ? '+' : ''}${piGap.toFixed(2)}%`
+    : 'Insufficient data'
+
+  // MA cross signal
+  const maCross = ma50 && ma200
+    ? (ma50 > ma200 ? 'bullish' : 'bearish')
+    : 'neutral'
+  const maCrossValue = ma50 && ma200
+    ? `MA50 ${ma50 > ma200 ? '>' : '<'} MA200 (${fmtPct(((ma50 - ma200) / ma200) * 100)})`
+    : 'Loading\u2026'
+
+  // BTC Dominance signal
+  const domSignal = btcDominance > 55 ? 'bearish' : btcDominance < 45 ? 'bullish' : 'neutral'
+
+  // MVRV signal
+  const mvrvSignal = mvrvEst < 2 ? 'bullish' : mvrvEst < 4 ? 'neutral' : mvrvEst < 6 ? 'warning' : 'bearish'
 
   return (
-    <div className="flex flex-col gap-4 p-3 md:p-6">
+    <div className="flex flex-col gap-4 md:gap-5">
+      {/* 1. Cycle Score */}
+      <CycleScoreBar score={cycleScore} />
 
-      {/* Target Tracker — hero */}
-      <TargetTracker currentPrice={currentPrice} positions={positions} prices={prices} />
+      {/* 2. Sell Zone Table */}
+      <SellZoneTable currentPrice={currentPrice} positions={positions} prices={prices} />
 
-      {/* Gauges row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-        <Gauge
-          label="Fear & Greed"
-          value={currentFng?.value ?? 50}
-          min={0} max={100}
-          sublabel={currentFng?.label ?? '—'}
-          color={currentFng?.value > 75 ? '#ef4444' : currentFng?.value < 25 ? '#10b981' : '#f59e0b'}
-          zones={FNG_ZONES}
-        />
-        <Gauge
-          label="RSI (14D)"
-          value={rsi ?? 50}
-          min={0} max={100}
-          sublabel={rsiLabel}
-          color={rsi > 70 ? '#ef4444' : rsi < 30 ? '#10b981' : '#f59e0b'}
-          zones={RSI_ZONES}
-        />
-        <Gauge
-          label="MVRV Est."
-          value={((mvrvEst ?? 2) / 8) * 100}
-          min={0} max={100}
-          sublabel={mvrvLabel}
-          color={mvrvEst > 6 ? '#ef4444' : mvrvEst > 4 ? '#f97316' : '#10b981'}
-          zones={MVRV_ZONES}
-        />
-        <Gauge
-          label="Alt Season"
-          value={altSeasonScore}
-          min={0} max={100}
-          sublabel={altSeasonScore > 75 ? 'Alt Season!' : altSeasonScore > 50 ? 'Alt Favorable' : 'BTC Season'}
-          color={altSeasonScore > 75 ? '#10b981' : altSeasonScore > 50 ? '#8b5cf6' : '#3b82f6'}
-          zones={ALT_ZONES}
-        />
+      {/* 3. Gauges */}
+      <div>
+        <div style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 10 }}>
+          Cycle Gauges
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <Gauge
+            value={currentFng?.value ?? 50}
+            label="Fear &amp; Greed"
+            sublabel={currentFng?.label ?? ''}
+            color="#f59e0b"
+            zones={FNG_ZONES}
+          />
+          <Gauge
+            value={rsiVal}
+            label="RSI 14D"
+            sublabel={rsiVal < 30 ? 'Oversold' : rsiVal > 70 ? 'Overbought' : 'Neutral'}
+            color={rsiVal < 30 ? '#22c55e' : rsiVal > 70 ? '#ef4444' : '#eab308'}
+            zones={RSI_ZONES}
+          />
+          <Gauge
+            value={mvrvPct}
+            label="MVRV Est."
+            sublabel={`MVRV \u2248 ${mvrvEst.toFixed(2)}`}
+            color={mvrvPct < 50 ? '#22c55e' : mvrvPct < 75 ? '#f97316' : '#ef4444'}
+            zones={MVRV_ZONES}
+          />
+          <Gauge
+            value={altSeasonScore}
+            label="Alt Season Index"
+            sublabel={altSeasonScore > 60 ? 'Alt Season' : 'BTC Season'}
+            color={altSeasonScore > 60 ? '#a855f7' : '#3b82f6'}
+            zones={ALT_ZONES}
+          />
+        </div>
       </div>
 
-      {/* Signal cards grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-        <PiCycleCard piCycle={piCycle} />
-
-        <Signal
-          label="Golden / Death Cross"
-          value={goldenCross ? 'Golden Cross ✓' : 'Death Cross ✗'}
-          signal={goldenCross ? 'bullish' : 'bearish'}
-          description={`50DMA: ${fmt$(ma50)} | 200DMA: ${fmt$(ma200)}`}
-          link="https://www.tradingview.com/symbols/BTCUSD/"
-        />
-
-        <Signal
-          label="BTC Dominance"
-          value={`${btcDominance?.toFixed(1)}%`}
-          signal={domSignal}
-          description={btcDominance < 45 ? 'Alt season territory' : btcDominance > 58 ? 'BTC season — alts lagging' : 'Mixed market'}
-          link="https://coinmarketcap.com/charts/"
-        />
-
-        <Signal
-          label="MVRV Z-Score (est.)"
-          value={mvrvEst?.toFixed(2)}
-          signal={mvrvSignal}
-          description={mvrvLabel + ' — Historical top: ~8'}
-          link="https://lookintobitcoin.com/charts/mvrv-zscore/"
-        />
-
-        <Signal
-          label="Total Crypto Market Cap"
-          value={fmt$(totalMarketCap)}
-          signal={totalMarketCap > 3e12 ? 'warning' : 'bullish'}
-          description={totalMarketCap > 3e12 ? 'Near historic highs' : 'Room to grow'}
-          link="https://coinmarketcap.com/charts/"
-        />
-
-        <Signal
-          label="Stock-to-Flow"
-          value="On Track"
-          signal="bullish"
-          description="Post-halving phase — S2F model bullish through 2025"
-          link="https://lookintobitcoin.com/charts/stock-to-flow-model/"
-        />
-
-        <Signal
-          label="Puell Multiple"
-          value="View Live"
-          signal="neutral"
-          description="Miner revenue vs 365D avg — requires on-chain data"
-          link="https://lookintobitcoin.com/charts/puell-multiple/"
-        />
-
-        <Signal
-          label="Rainbow Chart"
-          value="View Live"
-          signal="neutral"
-          description="Log regression bands — price vs long-term trend"
-          link="https://www.blockchaincenter.net/en/bitcoin-rainbow-chart/"
-        />
-
-        <Signal
-          label="2-Year MA Multiplier"
-          value="View Live"
-          signal="neutral"
-          description="Bull/bear market separator based on 2Y moving average"
-          link="https://lookintobitcoin.com/charts/bitcoin-investor-tool/"
-        />
+      {/* 4. Signal Cards */}
+      <div>
+        <div style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 10 }}>
+          On-Chain &amp; Technical Signals
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <Signal
+            label="Pi Cycle Top"
+            value={piValue}
+            signal={piSignal}
+            description={
+              piGap != null
+                ? piGap > 0
+                  ? 'MA111 above 2\u00d7MA350 \u2014 potential top signal active'
+                  : 'MA111 below 2\u00d7MA350 \u2014 gap narrowing as price rises'
+                : 'Need 350+ days of price data'
+            }
+            link="https://lookintobitcoin.com/charts/pi-cycle-top-indicator/"
+          />
+          <Signal
+            label="Golden / Death Cross"
+            value={maCrossValue}
+            signal={maCross}
+            description={
+              maCross === 'bullish'
+                ? 'Golden Cross active \u2014 50 DMA above 200 DMA (bullish trend)'
+                : maCross === 'bearish'
+                  ? 'Death Cross \u2014 50 DMA below 200 DMA (bearish trend)'
+                  : 'MA data loading\u2026'
+            }
+            link="https://tradingview.com"
+          />
+          <Signal
+            label="BTC Dominance"
+            value={`${btcDominance.toFixed(1)}% BTC.D`}
+            signal={domSignal}
+            description={
+              btcDominance > 55
+                ? 'High dominance \u2014 capital concentrated in BTC, alts lagging'
+                : btcDominance < 45
+                  ? 'Low dominance \u2014 alt season conditions forming'
+                  : 'Mid-range dominance \u2014 balanced market'
+            }
+            link="https://coinmarketcap.com/charts/"
+          />
+          <Signal
+            label="MVRV Z-Score Est."
+            value={`MVRV \u2248 ${mvrvEst.toFixed(2)}`}
+            signal={mvrvSignal}
+            description={
+              mvrvEst < 2
+                ? 'Undervalued zone \u2014 historically strong buy signal'
+                : mvrvEst < 4
+                  ? 'Fair value range \u2014 healthy bull market territory'
+                  : mvrvEst < 6
+                    ? 'Elevated \u2014 approaching distribution zone'
+                    : 'Danger zone \u2014 historically near cycle top'
+            }
+            link="https://lookintobitcoin.com/charts/mvrv-zscore/"
+          />
+          <Signal
+            label="Total Market Cap"
+            value={fmt$(totalMarketCap)}
+            signal="neutral"
+            description="Global crypto market capitalization (live)"
+            link="https://coinmarketcap.com/charts/"
+          />
+          <Signal
+            label="Stock-to-Flow"
+            value="Post-halving / Bullish"
+            signal="bullish"
+            description="April 2024 halving \u2014 S2F model points to continued upside through 2025"
+            link="https://lookintobitcoin.com/charts/stock-to-flow-model/"
+          />
+          <Signal
+            label="Puell Multiple"
+            value="View Live \u2192"
+            signal="neutral"
+            description="Miner revenue relative to historical average \u2014 top signal when elevated"
+            link="https://lookintobitcoin.com/charts/puell-multiple/"
+          />
+          <Signal
+            label="Rainbow Chart"
+            value="View Live \u2192"
+            signal="neutral"
+            description="Logarithmic price bands \u2014 shows long-term price position in the cycle"
+            link="https://www.blockchaincenter.net/en/bitcoin-rainbow-chart/"
+          />
+          <Signal
+            label="2Y MA Multiplier"
+            value="View Live \u2192"
+            signal="neutral"
+            description="Price vs 2-year MA and 5\u00d7 multiplier \u2014 classic cycle top/bottom tool"
+            link="https://lookintobitcoin.com/charts/bitcoin-investor-tool/"
+          />
+        </div>
       </div>
 
-      {/* Fear & Greed Chart */}
-      <FearGreedChart history={fngHistory} />
+      {/* 5. Fear & Greed Chart */}
+      <FearGreedChart data={fngHistory} />
 
-      {/* Disclaimer */}
-      <div className="card p-4 text-xs" style={{ color: 'var(--text-muted)', borderColor: 'rgba(59,130,246,0.2)' }}>
-        <span className="font-semibold text-white">Disclaimer: </span>
-        MVRV estimate is approximated from price data (on-chain MVRV requires Glassnode).
-        Pi Cycle, RSI, and MAs are calculated from CoinGecko price history.
-        Fear & Greed is live from Alternative.me. This is not financial advice — always do your own research.
+      {/* 6. Disclaimer */}
+      <div className="card p-4" style={{ borderColor: 'rgba(239,68,68,0.2)' }}>
+        <div className="flex items-start gap-3">
+          <Shield size={16} style={{ color: '#ef4444', flexShrink: 0, marginTop: 1 }} />
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#ef4444', marginBottom: 4 }}>
+              Disclaimer &mdash; Not Financial Advice
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+              These indicators are for informational purposes only and do not constitute financial advice.
+              Crypto markets are highly volatile and past performance does not guarantee future results.
+              On-chain estimates (MVRV, Pi Cycle) are approximations derived from public price data.
+              Always do your own research and consult a qualified financial advisor before making investment decisions.
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )
