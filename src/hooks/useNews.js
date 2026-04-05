@@ -1,6 +1,17 @@
 import { useState, useEffect, useRef } from 'react'
 
-const CATEGORIES = ['all', 'BTC', 'ETH', 'SOL', 'LINK', 'ADA', 'market', 'trading']
+// Free RSS feeds via rss2json (no API key needed for public feeds)
+const FEEDS = {
+  all:        'https://cointelegraph.com/rss',
+  bitcoin:    'https://cointelegraph.com/rss/tag/bitcoin',
+  ethereum:   'https://cointelegraph.com/rss/tag/ethereum',
+  solana:     'https://cointelegraph.com/rss/tag/solana',
+  altcoins:   'https://cointelegraph.com/rss/tag/altcoin',
+  markets:    'https://cointelegraph.com/rss/category/market-analysis',
+  defi:       'https://cointelegraph.com/rss/tag/defi',
+}
+
+const RSS2JSON = 'https://api.rss2json.com/v1/api.json'
 
 export function useNews(category = 'all') {
   const [articles, setArticles] = useState([])
@@ -11,17 +22,20 @@ export function useNews(category = 'all') {
   useEffect(() => {
     isMounted.current = true
     setLoading(true)
+    setArticles([])
 
-    const params = category === 'all'
-      ? '?lang=EN&sortOrder=latest'
-      : `?lang=EN&categories=${category}&sortOrder=latest`
+    const feed = FEEDS[category] || FEEDS.all
+    const url = `${RSS2JSON}?rss_url=${encodeURIComponent(feed)}&count=24`
 
-    fetch(`https://min-api.cryptocompare.com/data/v2/news/${params}`)
+    fetch(url)
       .then(r => r.json())
       .then(data => {
-        if (isMounted.current && data.Data) {
-          setArticles(data.Data.slice(0, 30))
+        if (!isMounted.current) return
+        if (data.status === 'ok' && data.items) {
+          setArticles(data.items)
           setError(null)
+        } else {
+          setError('Failed to load feed')
         }
         setLoading(false)
       })

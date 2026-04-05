@@ -1,55 +1,49 @@
 import React, { useState } from 'react'
-import { ExternalLink, Clock, RefreshCw, Newspaper } from 'lucide-react'
+import { ExternalLink, Clock, RefreshCw, Newspaper, Globe } from 'lucide-react'
 import { useNews } from '../hooks/useNews'
 
 const CATEGORIES = [
-  { id: 'all',     label: 'All News' },
-  { id: 'BTC',     label: 'Bitcoin' },
-  { id: 'ETH',     label: 'Ethereum' },
-  { id: 'SOL',     label: 'Solana' },
-  { id: 'LINK',    label: 'Chainlink' },
-  { id: 'market',  label: 'Markets' },
-  { id: 'trading', label: 'Trading' },
+  { id: 'all',      label: 'All News' },
+  { id: 'bitcoin',  label: 'Bitcoin' },
+  { id: 'ethereum', label: 'Ethereum' },
+  { id: 'solana',   label: 'Solana' },
+  { id: 'altcoins', label: 'Altcoins' },
+  { id: 'markets',  label: 'Markets' },
+  { id: 'defi',     label: 'DeFi' },
 ]
 
-function timeAgo(timestamp) {
-  const diff = Date.now() / 1000 - timestamp
+function timeAgo(dateStr) {
+  const diff = (Date.now() - new Date(dateStr).getTime()) / 1000
   if (diff < 60) return 'just now'
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
   return `${Math.floor(diff / 86400)}d ago`
 }
 
+function stripHtml(html) {
+  return html?.replace(/<[^>]*>/g, '').replace(/&[^;]+;/g, ' ').trim() || ''
+}
+
 function ArticleCard({ article }) {
+  const description = stripHtml(article.description)
+
   return (
     <a
-      href={article.url}
+      href={article.link}
       target="_blank"
       rel="noopener noreferrer"
       className="card card-hover flex flex-col gap-3 p-4 group"
       style={{ textDecoration: 'none' }}
     >
       {/* Image */}
-      {article.imageurl && (
+      {article.thumbnail && (
         <div className="w-full rounded-lg overflow-hidden" style={{ height: 160 }}>
           <img
-            src={article.imageurl}
+            src={article.thumbnail}
             alt={article.title}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-            onError={e => { e.target.style.display = 'none' }}
+            onError={e => { e.target.parentElement.style.display = 'none' }}
           />
-        </div>
-      )}
-
-      {/* Categories */}
-      {article.categories && (
-        <div className="flex flex-wrap gap-1">
-          {article.categories.split('|').slice(0, 3).map(cat => (
-            <span key={cat} className="text-xs px-2 py-0.5 rounded-full"
-              style={{ background: 'rgba(59,130,246,0.1)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.2)' }}>
-              {cat.trim()}
-            </span>
-          ))}
         </div>
       )}
 
@@ -58,26 +52,24 @@ function ArticleCard({ article }) {
         {article.title}
       </h3>
 
-      {/* Body preview */}
-      <p className="text-xs leading-relaxed line-clamp-3" style={{ color: 'var(--text-secondary)' }}>
-        {article.body}
-      </p>
+      {/* Description */}
+      {description && (
+        <p className="text-xs leading-relaxed line-clamp-3" style={{ color: 'var(--text-secondary)' }}>
+          {description}
+        </p>
+      )}
 
       {/* Footer */}
       <div className="flex items-center justify-between mt-auto pt-1">
-        <div className="flex items-center gap-2">
-          {article.source_info?.img && (
-            <img src={article.source_info.img} alt={article.source}
-              className="w-4 h-4 rounded-full object-contain"
-              onError={e => { e.target.style.display = 'none' }} />
-          )}
+        <div className="flex items-center gap-1.5">
+          <Globe size={10} style={{ color: 'var(--text-muted)' }} />
           <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
-            {article.source_info?.name || article.source}
+            CoinTelegraph
           </span>
         </div>
         <div className="flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }}>
           <Clock size={10} />
-          <span className="text-xs">{timeAgo(article.published_on)}</span>
+          <span className="text-xs">{timeAgo(article.pubDate)}</span>
           <ExternalLink size={10} className="opacity-0 group-hover:opacity-100 transition-opacity" />
         </div>
       </div>
