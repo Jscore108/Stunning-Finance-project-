@@ -7,6 +7,7 @@ import WatchlistPage from './components/WatchlistPage'
 import MarketOverview from './components/MarketOverview'
 import PositionsTable from './components/PositionsTable'
 import NewsPage from './components/NewsPage'
+import IndicatorsPage from './components/IndicatorsPage'
 import { PortfolioProvider, usePortfolio } from './context/PortfolioContext'
 import { usePrices, useCoinDetails } from './hooks/usePrices'
 
@@ -63,6 +64,7 @@ function AppInner() {
             <WatchlistPage watchlist={watchlist} details={details} prices={prices} />
           )}
           {page === 'news' && <NewsPage />}
+          {page === 'indicators' && <IndicatorsPage positions={positions} prices={prices} />}
         </main>
       </div>
     </div>
