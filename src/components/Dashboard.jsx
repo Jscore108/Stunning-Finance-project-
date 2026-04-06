@@ -32,7 +32,6 @@ export default function Dashboard({ prices, details, loading }) {
     const totalPnl = totalValue - totalCost
     const totalPnlPct = totalCost ? (totalPnl / totalCost) * 100 : 0
 
-    // Weighted 24h portfolio change
     const portfolioChange24h = positions.reduce((acc, pos) => {
       const p = prices[pos.id]
       const d = details[pos.id]
@@ -46,7 +45,7 @@ export default function Dashboard({ prices, details, loading }) {
   }, [positions, prices, details])
 
   return (
-    <div className="flex flex-col gap-4 p-3 md:p-6">
+    <div className="flex flex-col gap-4 p-3 md:p-6 stagger-in">
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         <StatCard
@@ -55,24 +54,28 @@ export default function Dashboard({ prices, details, loading }) {
           subValue={`Cost basis: ${fmt$(stats.totalCost)}`}
           change={stats.portfolioChange24h}
           icon={Wallet}
+          accent="rgba(59,130,246,0.15)"
         />
         <StatCard
           label="Total P&L"
           value={(stats.totalPnl >= 0 ? '+' : '') + fmt$(stats.totalPnl)}
           subValue={fmtPct(stats.totalPnlPct) + ' all time'}
           icon={stats.totalPnl >= 0 ? TrendingUp : TrendingDown}
+          accent={stats.totalPnl >= 0 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)'}
         />
         <StatCard
           label="Best Performer"
           value={stats.bestPnl.sym || '—'}
           subValue={stats.bestPnl.val !== -Infinity ? fmtPct(stats.bestPnl.val) + ' ROI' : ''}
           icon={TrendingUp}
+          accent="rgba(16,185,129,0.15)"
         />
         <StatCard
           label="Worst Performer"
           value={stats.worstPnl.sym || '—'}
           subValue={stats.worstPnl.val !== Infinity ? fmtPct(stats.worstPnl.val) + ' ROI' : ''}
           icon={TrendingDown}
+          accent="rgba(239,68,68,0.15)"
         />
       </div>
 
