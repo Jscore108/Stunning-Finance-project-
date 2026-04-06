@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { ArrowUpDown, ArrowUp, ArrowDown, Trash2, Plus } from 'lucide-react'
+import { ArrowUpDown, ArrowUp, ArrowDown, Trash2, Plus, X } from 'lucide-react'
 import { fmt$, fmtPct, fmtNum } from './StatCard'
 
 const COIN_COLORS = {
@@ -24,8 +24,16 @@ function Sparkline({ data }) {
   }).join(' ')
   const isUp = prices[prices.length - 1] >= prices[0]
   const color = isUp ? '#10b981' : '#ef4444'
+  const gradId = `pos-spark-${Math.random().toString(36).slice(2, 6)}`
   return (
     <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.25" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <polygon points={`${pts} ${w - pad},${h - pad} ${pad},${h - pad}`} fill={`url(#${gradId})`} />
       <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" />
     </svg>
   )
@@ -34,7 +42,7 @@ function Sparkline({ data }) {
 function CoinIcon({ symbol, size = 28 }) {
   const color = COIN_COLORS[symbol] || '#64748b'
   return (
-    <div className="rounded-full flex items-center justify-center text-white font-bold shrink-0"
+    <div className="rounded-full flex items-center justify-center text-white font-bold shrink-0 ring-2 ring-white/5 transition-transform duration-300 group-hover:scale-110"
       style={{ width: size, height: size, background: color, fontSize: size * 0.32 }}>
       {symbol.slice(0, 2)}
     </div>
@@ -100,8 +108,12 @@ export default function PositionsTable({ positions, prices, details, totalValue,
         </div>
         <button
           onClick={() => setAddOpen(true)}
-          className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium transition-colors"
-          style={{ background: 'rgba(59,130,246,0.15)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.25)' }}
+          className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl font-medium transition-all duration-300 active:scale-95 hover:shadow-lg"
+          style={{
+            background: 'linear-gradient(135deg, rgba(59,130,246,0.2), rgba(139,92,246,0.2))',
+            color: '#60a5fa',
+            border: '1px solid rgba(59,130,246,0.25)',
+          }}
         >
           <Plus size={13} /> Add
         </button>
@@ -109,8 +121,9 @@ export default function PositionsTable({ positions, prices, details, totalValue,
 
       {/* Mobile card list */}
       <div className="md:hidden divide-y" style={{ borderColor: 'rgba(30,45,74,0.5)' }}>
-        {sorted.map(pos => (
-          <div key={pos.id} className="px-4 py-3 flex items-center justify-between gap-3">
+        {sorted.map((pos, i) => (
+          <div key={pos.id} className="px-4 py-3 flex items-center justify-between gap-3 transition-all duration-300 hover:bg-white/5"
+            style={{ animation: `fadeSlideUp 0.4s ease ${i * 0.05}s both` }}>
             <div className="flex items-center gap-3 min-w-0">
               <CoinIcon symbol={pos.symbol} size={36} />
               <div className="min-w-0">
@@ -124,7 +137,7 @@ export default function PositionsTable({ positions, prices, details, totalValue,
               <div className="font-semibold text-white text-sm number-font">
                 {pos.value ? fmt$(pos.value) : '—'}
               </div>
-              <div className="text-xs number-font">
+              <div className="text-xs number-font" style={{ color: 'var(--text-muted)' }}>
                 {pos.currentPrice ? fmt$(pos.currentPrice, pos.currentPrice > 100 ? 2 : 4) : '—'}
               </div>
             </div>
@@ -135,7 +148,7 @@ export default function PositionsTable({ positions, prices, details, totalValue,
                 </div>
               ) : null}
               {pos.change24h !== null ? (
-                <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${pos.change24h >= 0 ? 'badge-green' : 'badge-red'}`}>
+                <span className={`text-xs font-medium px-1.5 py-0.5 rounded-lg ${pos.change24h >= 0 ? 'badge-green' : 'badge-red'}`}>
                   {fmtPct(pos.change24h)}
                 </span>
               ) : null}
@@ -153,7 +166,7 @@ export default function PositionsTable({ positions, prices, details, totalValue,
                 <th
                   key={col}
                   onClick={() => ['Asset','Price','24h %','7d %','Value','P&L','Allocation'].includes(col) ? handleSort(col) : null}
-                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider select-none whitespace-nowrap"
+                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider select-none whitespace-nowrap transition-colors"
                   style={{
                     color: sortCol === col ? '#60a5fa' : 'var(--text-muted)',
                     cursor: ['Asset','Price','24h %','7d %','Value','P&L','Allocation'].includes(col) ? 'pointer' : 'default'
@@ -170,51 +183,46 @@ export default function PositionsTable({ positions, prices, details, totalValue,
           <tbody>
             {sorted.map((pos, i) => (
               <tr key={pos.id}
-                className="card-hover transition-colors"
-                style={{ borderBottom: i < sorted.length - 1 ? '1px solid rgba(30,45,74,0.5)' : 'none' }}>
-                {/* Asset */}
+                className="card-hover transition-all duration-300 group"
+                style={{
+                  borderBottom: i < sorted.length - 1 ? '1px solid rgba(30,45,74,0.5)' : 'none',
+                  animation: `fadeSlideUp 0.4s ease ${i * 0.04}s both`,
+                }}>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
                     <CoinIcon symbol={pos.symbol} />
                     <div>
-                      <div className="font-medium text-white">{pos.name}</div>
+                      <div className="font-medium text-white group-hover:text-blue-300 transition-colors">{pos.name}</div>
                       <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{pos.symbol}</div>
                     </div>
                   </div>
                 </td>
-                {/* Price */}
                 <td className="px-4 py-3 number-font font-medium text-white whitespace-nowrap">
                   {pos.currentPrice ? fmt$(pos.currentPrice, pos.currentPrice > 100 ? 2 : 4) : <span style={{ color: 'var(--text-muted)' }}>—</span>}
                 </td>
-                {/* 24h */}
                 <td className="px-4 py-3 whitespace-nowrap">
                   {pos.change24h !== null ? (
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${pos.change24h >= 0 ? 'badge-green' : 'badge-red'}`}>
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-lg ${pos.change24h >= 0 ? 'badge-green' : 'badge-red'}`}>
                       {fmtPct(pos.change24h)}
                     </span>
                   ) : '—'}
                 </td>
-                {/* 7d */}
                 <td className="px-4 py-3 whitespace-nowrap">
                   {pos.change7d !== null ? (
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${pos.change7d >= 0 ? 'badge-green' : 'badge-red'}`}>
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-lg ${pos.change7d >= 0 ? 'badge-green' : 'badge-red'}`}>
                       {fmtPct(pos.change7d)}
                     </span>
                   ) : '—'}
                 </td>
-                {/* Holdings */}
                 <td className="px-4 py-3 number-font whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
                   {fmtNum(pos.amount, pos.amount < 1 ? 4 : 2)} {pos.symbol}
                 </td>
-                {/* Value */}
                 <td className="px-4 py-3 number-font font-semibold text-white whitespace-nowrap">
                   {pos.value ? fmt$(pos.value) : '—'}
                 </td>
-                {/* Avg Cost */}
                 <td className="px-4 py-3 number-font whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>
                   {fmt$(pos.avgBuyPrice, pos.avgBuyPrice > 100 ? 2 : 4)}
                 </td>
-                {/* P&L */}
                 <td className="px-4 py-3 whitespace-nowrap">
                   {pos.pnl !== null ? (
                     <div>
@@ -227,25 +235,27 @@ export default function PositionsTable({ positions, prices, details, totalValue,
                     </div>
                   ) : '—'}
                 </td>
-                {/* Allocation */}
                 <td className="px-4 py-3 whitespace-nowrap">
                   {pos.alloc !== null ? (
                     <div className="flex items-center gap-2">
-                      <div className="w-16 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--border)' }}>
-                        <div className="h-full rounded-full" style={{ width: `${Math.min(pos.alloc, 100)}%`, background: COIN_COLORS[pos.symbol] || '#3b82f6' }} />
+                      <div className="w-16 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(30,45,74,0.6)' }}>
+                        <div className="h-full rounded-full transition-all duration-700 ease-out"
+                          style={{
+                            width: `${Math.min(pos.alloc, 100)}%`,
+                            background: COIN_COLORS[pos.symbol] || '#3b82f6',
+                            boxShadow: `0 0 6px ${(COIN_COLORS[pos.symbol] || '#3b82f6')}40`,
+                          }} />
                       </div>
                       <span className="text-xs number-font" style={{ color: 'var(--text-secondary)' }}>{pos.alloc.toFixed(1)}%</span>
                     </div>
                   ) : '—'}
                 </td>
-                {/* Sparkline */}
                 <td className="px-4 py-3">
                   <Sparkline data={pos.sparkline} />
                 </td>
-                {/* Remove */}
                 <td className="px-4 py-3">
                   <button onClick={() => onRemove(pos.id)}
-                    className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/10 hover:text-red-400"
+                    className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-red-500/10 hover:text-red-400 hover:scale-110"
                     style={{ color: 'var(--text-muted)' }}>
                     <Trash2 size={13} />
                   </button>
@@ -255,7 +265,6 @@ export default function PositionsTable({ positions, prices, details, totalValue,
           </tbody>
         </table>
       </div>
-      {/* end desktop table */}
 
       {addOpen && <AddPositionModal onClose={() => setAddOpen(false)} />}
     </div>
@@ -264,15 +273,20 @@ export default function PositionsTable({ positions, prices, details, totalValue,
 
 function AddPositionModal({ onClose }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.7)' }}>
-      <div className="card p-6 w-full max-w-md mx-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}>
+      <div className="card p-6 w-full max-w-md mx-4 relative" style={{ animation: 'pageIn 0.3s ease' }}>
+        <button onClick={onClose}
+          className="absolute top-4 right-4 p-1 rounded-lg hover:bg-white/10 transition-colors"
+          style={{ color: 'var(--text-muted)' }}>
+          <X size={16} />
+        </button>
         <h3 className="text-white font-semibold mb-4">Add Position</h3>
         <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-          Position management coming soon. Edit <code>src/context/PortfolioContext.jsx</code> to update your holdings.
+          Position management coming soon. Edit <code className="px-1.5 py-0.5 rounded-md text-xs" style={{ background: 'rgba(59,130,246,0.1)', color: '#60a5fa' }}>src/context/PortfolioContext.jsx</code> to update your holdings.
         </p>
         <button onClick={onClose}
-          className="mt-4 w-full py-2 rounded-lg text-sm font-medium"
-          style={{ background: 'var(--accent)', color: 'white' }}>
+          className="mt-4 w-full py-2.5 rounded-xl text-sm font-medium transition-all duration-300 active:scale-98 hover:shadow-lg"
+          style={{ background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', color: 'white' }}>
           Close
         </button>
       </div>

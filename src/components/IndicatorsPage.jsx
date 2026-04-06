@@ -61,16 +61,23 @@ function Gauge({ value = 0, label, sublabel, color = '#22c55e', zones = [] }) {
 
   const needleAngle = startAngle + (Math.min(Math.max(value, 0), 100) / 100) * totalSpan
   const needleEnd   = polarToCartesian(cx, cy, r - 8, needleAngle)
+  const glowId = `gauge-glow-${label?.replace(/\s/g, '') || 'default'}`
 
   return (
-    <div className="card p-3 flex flex-col items-center gap-1">
+    <div className="card p-3 flex flex-col items-center gap-1 hover-lift group">
       <svg viewBox="0 0 200 140" style={{ width: '100%', maxWidth: 200 }}>
+        <defs>
+          <filter id={glowId}>
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+          </filter>
+        </defs>
         {/* Background arc */}
         <path
           d={describeArc(cx, cy, r, startAngle, endAngle)}
           fill="none"
-          stroke="rgba(255,255,255,0.08)"
-          strokeWidth={14}
+          stroke="rgba(255,255,255,0.06)"
+          strokeWidth={16}
           strokeLinecap="round"
         />
         {/* Zone arcs */}
@@ -83,29 +90,31 @@ function Gauge({ value = 0, label, sublabel, color = '#22c55e', zones = [] }) {
               d={describeArc(cx, cy, r, zStart, zEnd)}
               fill="none"
               stroke={z.color}
-              strokeWidth={14}
+              strokeWidth={16}
               strokeLinecap="butt"
-              opacity={0.7}
+              opacity={0.75}
             />
           )
         })}
-        {/* Needle */}
+        {/* Needle with glow */}
         <line
           x1={cx} y1={cy}
           x2={needleEnd.x} y2={needleEnd.y}
           stroke="white"
           strokeWidth={2.5}
           strokeLinecap="round"
+          filter={`url(#${glowId})`}
         />
-        <circle cx={cx} cy={cy} r={5} fill={color} />
+        <circle cx={cx} cy={cy} r={6} fill={color} style={{ filter: `drop-shadow(0 0 6px ${color})` }} />
         {/* Value text */}
         <text
-          x={cx} y={cy + 22}
+          x={cx} y={cy + 24}
           textAnchor="middle"
           fill="white"
-          fontSize={22}
+          fontSize={24}
           fontWeight="bold"
           fontFamily="var(--font-number, monospace)"
+          style={{ filter: `drop-shadow(0 0 8px ${color}60)` }}
         >
           {Math.round(value)}
         </text>
@@ -130,8 +139,12 @@ function CycleScoreBar({ score = 0 }) {
   const { text, color } = cycleLabel(score)
   const pct = Math.min(Math.max(score, 0), 100)
   return (
-    <div className="card p-4 md:p-5">
-      <div className="flex items-center justify-between mb-3">
+    <div className="card p-4 md:p-5 relative overflow-hidden">
+      {/* Background glow */}
+      <div className="absolute -top-20 -right-20 w-60 h-60 rounded-full pointer-events-none"
+        style={{ background: `radial-gradient(circle, ${color}15, transparent 70%)`, filter: 'blur(40px)' }} />
+
+      <div className="flex items-center justify-between mb-3 relative z-10">
         <div>
           <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', fontWeight: 500 }}>
             Cycle Score
@@ -140,22 +153,21 @@ function CycleScoreBar({ score = 0 }) {
             Composite indicator (RSI + F&G + MVRV + Pi Cycle)
           </div>
         </div>
-        <div className="number-font" style={{ fontSize: 'clamp(2rem, 6vw, 3rem)', fontWeight: 800, color, lineHeight: 1 }}>
+        <div className="number-font" style={{ fontSize: 'clamp(2rem, 6vw, 3rem)', fontWeight: 800, color, lineHeight: 1, textShadow: `0 0 20px ${color}40` }}>
           {score}
           <span style={{ fontSize: '0.4em', color: 'var(--text-muted)', marginLeft: 2 }}>/100</span>
         </div>
       </div>
       {/* Track */}
-      <div style={{ position: 'relative', height: 18, borderRadius: 9, overflow: 'hidden', background: 'rgba(255,255,255,0.06)' }}>
-        {/* Gradient fill */}
+      <div className="relative z-10" style={{ position: 'relative', height: 20, borderRadius: 10, overflow: 'hidden', background: 'rgba(255,255,255,0.06)' }}>
         <div style={{
           height: '100%',
           width: `${pct}%`,
           background: 'linear-gradient(90deg, #22c55e 0%, #eab308 40%, #f97316 65%, #ef4444 80%, #b91c1c 100%)',
-          borderRadius: 9,
-          transition: 'width 0.6s ease',
+          borderRadius: 10,
+          transition: 'width 0.8s cubic-bezier(0.22, 1, 0.36, 1)',
+          boxShadow: `0 0 12px ${color}40`,
         }} />
-        {/* Zone markers */}
         {[40, 65, 80].map(m => (
           <div key={m} style={{
             position: 'absolute', top: 0, bottom: 0, left: `${m}%`,
@@ -163,15 +175,15 @@ function CycleScoreBar({ score = 0 }) {
           }} />
         ))}
       </div>
-      <div className="flex justify-between mt-2" style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+      <div className="flex justify-between mt-2 relative z-10" style={{ fontSize: 11, color: 'var(--text-muted)' }}>
         <span>Accumulation</span>
         <span>Early Bull</span>
         <span>Mid Bull</span>
         <span>Late Bull</span>
         <span>Top Zone</span>
       </div>
-      <div className="mt-3 flex items-center gap-2">
-        <div style={{ width: 10, height: 10, borderRadius: '50%', background: color, flexShrink: 0 }} />
+      <div className="mt-3 flex items-center gap-2 relative z-10">
+        <div style={{ width: 10, height: 10, borderRadius: '50%', background: color, flexShrink: 0, boxShadow: `0 0 8px ${color}` }} />
         <span style={{ fontSize: 13, fontWeight: 600, color }}>{text}</span>
       </div>
     </div>
@@ -191,27 +203,32 @@ const SIGNAL_STYLES = {
 function Signal({ label, value, signal = 'neutral', description, link }) {
   const s = SIGNAL_STYLES[signal] || SIGNAL_STYLES.neutral
   return (
-    <div className="card card-hover p-3 md:p-4 flex flex-col gap-2">
-      <div className="flex items-start justify-between gap-2">
+    <div className="card card-hover p-3 md:p-4 flex flex-col gap-2 group relative overflow-hidden">
+      {/* Accent glow */}
+      <div className="absolute -top-6 -right-6 w-16 h-16 rounded-full pointer-events-none transition-opacity duration-300 opacity-0 group-hover:opacity-100"
+        style={{ background: s.text, filter: 'blur(20px)', opacity: 0.1 }} />
+
+      <div className="flex items-start justify-between gap-2 relative z-10">
         <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', lineHeight: 1.3 }}>{label}</div>
-        <span style={{
-          fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 99,
+        <span className="transition-transform duration-300 group-hover:scale-105" style={{
+          fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 99,
           background: s.bg, border: `1px solid ${s.border}`, color: s.text,
           whiteSpace: 'nowrap', flexShrink: 0,
+          boxShadow: `0 0 8px ${s.text}20`,
         }}>
           {s.label}
         </span>
       </div>
-      <div className="number-font" style={{ fontSize: 13, fontWeight: 700, color: 'white' }}>{value}</div>
+      <div className="number-font relative z-10" style={{ fontSize: 13, fontWeight: 700, color: 'white' }}>{value}</div>
       {description && (
-        <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.4 }}>{description}</div>
+        <div className="relative z-10" style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.4 }}>{description}</div>
       )}
       {link && (
         <a
           href={link}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-1 mt-auto"
+          className="flex items-center gap-1 mt-auto relative z-10 transition-all duration-300 hover:gap-2"
           style={{ fontSize: 11, color: '#60a5fa', textDecoration: 'none' }}
         >
           View Live <ExternalLink size={10} />
@@ -441,7 +458,10 @@ export default function IndicatorsPage({ positions = [], prices = {} }) {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-20">
-        <div style={{ width: 40, height: 40, borderRadius: '50%', border: '3px solid rgba(255,255,255,0.1)', borderTopColor: '#f59e0b', animation: 'spin 0.8s linear infinite' }} />
+        <div className="relative">
+          <div style={{ width: 48, height: 48, borderRadius: '50%', border: '3px solid rgba(255,255,255,0.06)', borderTopColor: '#f59e0b', animation: 'spin 0.8s linear infinite' }} />
+          <div className="absolute inset-0 rounded-full" style={{ border: '3px solid transparent', borderBottomColor: '#8b5cf6', animation: 'spin 1.2s linear infinite reverse' }} />
+        </div>
         <div style={{ color: 'var(--text-muted)', fontSize: 14 }}>Loading indicators&hellip;</div>
       </div>
     )
@@ -449,12 +469,15 @@ export default function IndicatorsPage({ positions = [], prices = {} }) {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 py-20 px-6">
-        <AlertTriangle size={36} style={{ color: '#f97316' }} />
+      <div className="flex flex-col items-center justify-center gap-4 py-20 px-6" style={{ animation: 'pageIn 0.4s ease' }}>
+        <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.2)' }}>
+          <AlertTriangle size={28} style={{ color: '#f97316' }} />
+        </div>
         <div style={{ color: 'white', fontWeight: 600, fontSize: 15 }}>Failed to load indicators</div>
         <div style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', maxWidth: 380 }}>{error}</div>
         <button onClick={retry}
-          style={{ background: '#3b82f6', color: 'white', border: 'none', borderRadius: 8, padding: '10px 24px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+          className="transition-all duration-300 active:scale-95 hover:shadow-lg"
+          style={{ background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', color: 'white', border: 'none', borderRadius: 12, padding: '10px 28px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
           Retry Now
         </button>
         <div style={{ color: 'var(--text-muted)', fontSize: 11 }}>CoinGecko free API allows ~10 requests/min. Wait 60s if retrying.</div>
@@ -508,7 +531,7 @@ export default function IndicatorsPage({ positions = [], prices = {} }) {
   const mvrvSignal = mvrvEst < 2 ? 'bullish' : mvrvEst < 4 ? 'neutral' : mvrvEst < 6 ? 'warning' : 'bearish'
 
   return (
-    <div className="flex flex-col gap-4 md:gap-5">
+    <div className="flex flex-col gap-4 md:gap-5 p-3 md:p-6 stagger-in">
       {/* 1. Cycle Score */}
       <CycleScoreBar score={cycleScore} />
 

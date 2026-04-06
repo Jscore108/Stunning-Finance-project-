@@ -8,14 +8,12 @@ import { fmt$ } from './StatCard'
 const PERIODS = ['24H', '7D', '30D', '90D', '1Y', 'ALL']
 
 function generateHistoricalData(totalValue, days) {
-  // Simulate historical equity curve with realistic random walk
   const data = []
   let val = totalValue
   const now = Date.now()
   const step = (days * 86400000) / Math.min(days * 4, 200)
   const points = Math.min(days * 4, 200)
 
-  // Work backwards
   const vals = [val]
   for (let i = 1; i < points; i++) {
     const drift = 0.0002
@@ -37,7 +35,7 @@ function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
   const val = payload[0]?.value
   return (
-    <div className="card p-3 text-xs" style={{ minWidth: 140 }}>
+    <div className="card p-3 text-xs" style={{ minWidth: 150, backdropFilter: 'blur(16px)' }}>
       <div style={{ color: 'var(--text-muted)' }}>{label}</div>
       <div className="text-white font-semibold mt-1 number-font text-sm">{fmt$(val)}</div>
     </div>
@@ -62,22 +60,24 @@ export default function PortfolioChart({ totalValue }) {
           <div className="text-xs font-medium uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>
             Portfolio Value
           </div>
-          <div className="text-3xl font-bold text-white number-font">{fmt$(totalValue)}</div>
+          <div className="text-3xl font-bold text-white number-font text-glow">{fmt$(totalValue)}</div>
           <div className={`flex items-center gap-1.5 mt-1 text-sm font-medium ${isUp ? 'positive' : 'negative'}`}>
-            <span>{isUp ? '▲' : '▼'}</span>
-            <span>{fmt$(Math.abs(change))}</span>
-            <span>({isUp ? '+' : ''}{changePct.toFixed(2)}%)</span>
+            <span className="px-2 py-0.5 rounded-lg text-xs" style={{
+              background: isUp ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
+            }}>
+              {isUp ? '▲' : '▼'} {fmt$(Math.abs(change))} ({isUp ? '+' : ''}{changePct.toFixed(2)}%)
+            </span>
             <span className="text-xs font-normal" style={{ color: 'var(--text-muted)' }}>vs {period} ago</span>
           </div>
         </div>
-        <div className="flex gap-1">
+        <div className="flex gap-1 p-1 rounded-xl" style={{ background: 'rgba(15,22,41,0.6)', border: '1px solid var(--border)' }}>
           {PERIODS.map(p => (
             <button key={p} onClick={() => setPeriod(p)}
-              className="text-xs px-2.5 py-1 rounded-lg font-medium transition-all"
+              className="text-xs px-2.5 py-1 rounded-lg font-medium transition-all duration-300 active:scale-95"
               style={{
                 background: period === p ? 'rgba(59,130,246,0.2)' : 'transparent',
                 color: period === p ? '#60a5fa' : 'var(--text-muted)',
-                border: period === p ? '1px solid rgba(59,130,246,0.3)' : '1px solid transparent',
+                boxShadow: period === p ? '0 0 8px rgba(59,130,246,0.15)' : 'none',
               }}>
               {p}
             </button>
@@ -85,24 +85,26 @@ export default function PortfolioChart({ totalValue }) {
         </div>
       </div>
 
-      <div style={{ height: 200 }}>
+      <div style={{ height: 220 }}>
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="portfolioGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={isUp ? '#10b981' : '#ef4444'} stopOpacity={0.25} />
+                <stop offset="5%" stopColor={isUp ? '#10b981' : '#ef4444'} stopOpacity={0.3} />
+                <stop offset="50%" stopColor={isUp ? '#10b981' : '#ef4444'} stopOpacity={0.08} />
                 <stop offset="95%" stopColor={isUp ? '#10b981' : '#ef4444'} stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(30,45,74,0.6)" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(30,45,74,0.4)" vertical={false} />
             <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false}
               interval={Math.floor(data.length / 5)} />
             <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false}
               tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} width={50} />
             <Tooltip content={<CustomTooltip />} />
             <Area type="monotone" dataKey="value"
-              stroke={isUp ? '#10b981' : '#ef4444'} strokeWidth={2}
-              fill="url(#portfolioGradient)" dot={false} activeDot={{ r: 4, strokeWidth: 0 }} />
+              stroke={isUp ? '#10b981' : '#ef4444'} strokeWidth={2.5}
+              fill="url(#portfolioGradient)" dot={false}
+              activeDot={{ r: 5, strokeWidth: 2, stroke: isUp ? '#10b981' : '#ef4444', fill: 'var(--bg-card)', filter: `drop-shadow(0 0 6px ${isUp ? 'rgba(16,185,129,0.6)' : 'rgba(239,68,68,0.6)'})` }} />
           </AreaChart>
         </ResponsiveContainer>
       </div>

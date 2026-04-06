@@ -35,7 +35,7 @@ export default function ChartsPage({ prices, details }) {
   }).sort((a, b) => b.change - a.change)
 
   return (
-    <div className="flex flex-col gap-4 p-3 md:p-6">
+    <div className="flex flex-col gap-4 p-3 md:p-6 stagger-in">
       <PriceChart positions={positions} prices={prices} details={details} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
@@ -51,7 +51,7 @@ export default function ChartsPage({ prices, details }) {
                 <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false}
                   tickFormatter={v => v >= 0 ? `+$${(Math.abs(v)/1000).toFixed(1)}k` : `-$${(Math.abs(v)/1000).toFixed(1)}k`} width={55} />
                 <Tooltip
-                  contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
+                  contentStyle={{ background: 'rgba(19,29,53,0.9)', backdropFilter: 'blur(12px)', border: '1px solid var(--border)', borderRadius: 12, fontSize: 12 }}
                   formatter={(v) => [fmt$(v), 'P&L']}
                 />
                 <Bar dataKey="pnl" radius={[3, 3, 0, 0]}>
@@ -76,7 +76,7 @@ export default function ChartsPage({ prices, details }) {
                 <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false}
                   tickFormatter={v => `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`} width={50} />
                 <Tooltip
-                  contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
+                  contentStyle={{ background: 'rgba(19,29,53,0.9)', backdropFilter: 'blur(12px)', border: '1px solid var(--border)', borderRadius: 12, fontSize: 12 }}
                   formatter={(v) => [fmtPct(v), '24h Change']}
                 />
                 <Bar dataKey="change" radius={[3, 3, 0, 0]}>
