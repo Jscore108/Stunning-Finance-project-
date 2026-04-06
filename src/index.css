@@ -313,6 +313,46 @@
 }
 
 @keyframes gridPulse {
-  0%, 100% { opacity: 0.03; }
-  50% { opacity: 0.06; }
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes connectionPulse {
+  0%, 100% { opacity: 0.3; stroke: rgba(59,130,246,0.06); }
+  50% { opacity: 1; stroke: rgba(59,130,246,0.15); }
+}
+
+@keyframes nodePulse {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.3); }
+}
+
+@keyframes floatHex {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); opacity: 0.6; }
+  25% { transform: translate(8px, -6px) rotate(15deg); opacity: 1; }
+  50% { transform: translate(-4px, 10px) rotate(-10deg); opacity: 0.5; }
+  75% { transform: translate(6px, 4px) rotate(8deg); opacity: 0.9; }
+}
+
+@keyframes floatTri {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); opacity: 0.5; }
+  33% { transform: translate(10px, -8px) rotate(30deg); opacity: 0.8; }
+  66% { transform: translate(-6px, 12px) rotate(-20deg); opacity: 0.4; }
+}
+
+@keyframes radarSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes scanLine {
+  0%, 100% { background-position: 0% 0%; }
+  50% { background-position: 0% 100%; }
+}
+
+@keyframes dataStream {
+  0% { stroke-dashoffset: 20; opacity: 0; }
+  30% { opacity: 0.6; }
+  70% { opacity: 0.6; }
+  100% { stroke-dashoffset: 0; opacity: 0; }
 }
