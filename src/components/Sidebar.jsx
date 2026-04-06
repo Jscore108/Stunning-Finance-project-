@@ -18,19 +18,26 @@ export default function Sidebar({ active, onNav }) {
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex flex-col w-60 min-h-screen border-r shrink-0 glass"
-        style={{ borderColor: 'var(--border)' }}>
+      <aside className="hidden md:flex flex-col w-60 min-h-screen border-r shrink-0 glass relative overflow-hidden"
+        style={{ borderColor: 'rgba(59,130,246,0.15)' }}>
+        {/* Sidebar gradient accent */}
+        <div className="absolute inset-0 pointer-events-none" style={{
+          background: 'linear-gradient(180deg, rgba(59,130,246,0.05) 0%, transparent 30%, transparent 70%, rgba(139,92,246,0.04) 100%)',
+        }} />
+        {/* Right edge glow line */}
+        <div className="absolute top-0 right-0 bottom-0 w-[1px]" style={{
+          background: 'linear-gradient(180deg, rgba(59,130,246,0.3), rgba(139,92,246,0.2), rgba(236,72,153,0.1), transparent)',
+        }} />
 
         {/* Logo */}
-        <div className="flex items-center gap-3 px-5 py-5 border-b" style={{ borderColor: 'var(--border)' }}>
+        <div className="flex items-center gap-3 px-5 py-5 border-b relative z-10" style={{ borderColor: 'rgba(59,130,246,0.1)' }}>
           <div className="relative">
             <div className="w-9 h-9 rounded-xl flex items-center justify-center glow-blue"
-              style={{ background: 'linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899)' }}>
-              <Activity size={17} className="text-white" style={{ filter: 'drop-shadow(0 0 4px rgba(255,255,255,0.5))' }} />
+              style={{ background: 'linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899, #f59e0b)' }}>
+              <Activity size={17} className="text-white" style={{ filter: 'drop-shadow(0 0 6px rgba(255,255,255,0.6))' }} />
             </div>
-            {/* Animated ring */}
             <div className="absolute inset-0 rounded-xl breathing-ring"
-              style={{ border: '1.5px solid rgba(59,130,246,0.3)' }} />
+              style={{ border: '2px solid rgba(59,130,246,0.4)' }} />
           </div>
           <div>
             <div className="text-sm font-bold tracking-wide gradient-text">CryptoDesk</div>
